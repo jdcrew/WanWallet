@@ -15,7 +15,7 @@ import java.net.URL
  */
 class BailianLLMClient(
     private val apiKey: String,
-    private val model: String = "qwen-coding-plan"
+    private val model: String = "qwen3.5-plus"  // 默认使用最新最强模型
 ) {
     
     companion object {
