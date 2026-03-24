@@ -16,6 +16,7 @@
     <!-- 后台服务权限 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.START_FOREGROUND_SERVICES_FROM_BACKGROUND" />
     
     <!-- 存储权限 (用于数据导出) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
@@ -49,6 +50,17 @@
             android:name=".service.NotificationListenerForegroundService"
             android:exported="false"
             android:foregroundServiceType="none" />
+        
+        <!-- 开机自启动 -->
+        <receiver
+            android:name=".service.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
         
         <!-- 通知监听服务 -->
         <service
