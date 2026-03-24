@@ -24,6 +24,18 @@ class BailianLLMClient(
     }
     
     /**
+     * 测试 API 连接
+     */
+    suspend fun testConnection(): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val response = callLLM("你好，请回复'测试成功'")
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    /**
      * 分类交易
      * 
      * @param merchant 商户名称
@@ -115,12 +127,14 @@ class BailianLLMClient(
         
         // 读取响应
         val responseCode = connection.responseCode
-        if (responseCode == HttpURLConnection.HTTP_OK) {
-            return connection.inputStream.bufferedReader().use { it.readText() }
+        val responseBody = if (responseCode == HttpURLConnection.HTTP_OK) {
+            connection.inputStream.bufferedReader().use { it.readText() }
         } else {
             val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
             throw RuntimeException("API call failed: $responseCode - $errorBody")
         }
+        
+        return responseBody
     }
     
     /**
