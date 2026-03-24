@@ -44,6 +44,12 @@
             </intent-filter>
         </activity>
         
+        <!-- 前台服务 -->
+        <service
+            android:name=".service.NotificationListenerForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="none" />
+        
         <!-- 通知监听服务 -->
         <service
             android:name=".service.PaymentNotificationListener"
