@@ -12,9 +12,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.jdcrew.wanwallet.ui.components.PieChart
+import com.jdcrew.wanwallet.ui.components.ChartLegend
+import com.jdcrew.wanwallet.ui.viewmodel.StatsViewModel
+import com.jdcrew.wanwallet.ui.viewmodel.StatsPeriod
+import dagger.hilt.android.lifecycle.HiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
 
 @Composable
 fun StatsPage() {
+    val viewModel: StatsViewModel = hiltViewModel()
+    val uiState by viewModel.uiState.collectAsState()
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -23,16 +33,23 @@ fun StatsPage() {
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // 时间选择器
-        TimePeriodSelector()
+        TimePeriodSelector(
+            selectedPeriod = uiState.selectedPeriod,
+            onPeriodChanged = { viewModel.updatePeriod(it) }
+        )
         
         // 总支出/收入概览
-        SummaryCards()
+        SummaryCards(
+            income = uiState.totalIncome,
+            expense = uiState.totalExpense,
+            balance = uiState.balance
+        )
         
         // 分类占比图表
-        CategoryChart()
+        CategoryChart(categoryData = uiState.categoryData)
         
-        // 趋势图表 (占位)
-        TrendChartPlaceholder()
+        // 趋势图表
+        TrendChart(trendData = uiState.dailyTrend)
         
         // 详细统计列表
         StatsDetailList()
@@ -40,25 +57,37 @@ fun StatsPage() {
 }
 
 @Composable
-fun TimePeriodSelector() {
-    var selectedPeriod by remember { mutableStateOf("本月") }
-    val periods = listOf("本周", "本月", "本年")
-    
+fun TimePeriodSelector(
+    selectedPeriod: StatsPeriod,
+    onPeriodChanged: (StatsPeriod) -> Unit
+) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        periods.forEach { period ->
+        StatsPeriod.values().forEach { period ->
             FilterChip(
                 selected = selectedPeriod == period,
-                onClick = { selectedPeriod = period },
-                label = { Text(period) }
+                onClick = { onPeriodChanged(period) },
+                label = { 
+                    Text(
+                        when (period) {
+                            StatsPeriod.WEEK -> "本周"
+                            StatsPeriod.MONTH -> "本月"
+                            StatsPeriod.YEAR -> "本年"
+                        }
+                    ) 
+                }
             )
         }
     }
 }
 
 @Composable
-fun SummaryCards() {
+fun SummaryCards(
+    income: Double,
+    expense: Double,
+    balance: Double
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -77,7 +106,7 @@ fun SummaryCards() {
                 Text(text = "支出", style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "¥0.00",
+                    text = "¥${String.format("%.2f", expense)}",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer
@@ -99,7 +128,7 @@ fun SummaryCards() {
                 Text(text = "收入", style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "¥0.00",
+                    text = "¥${String.format("%.2f", income)}",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -110,7 +139,7 @@ fun SummaryCards() {
 }
 
 @Composable
-fun CategoryChart() {
+fun CategoryChart(categoryData: List<PieChartSlice>) {
     Card {
         Column(
             modifier = Modifier
@@ -120,39 +149,27 @@ fun CategoryChart() {
             Text(text = "分类占比", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
             
-            // 环形图占位
-            Box(
-                modifier = Modifier
-                    .size(200.dp)
-                    .align(Alignment.CenterHorizontally),
-                contentAlignment = Alignment.Center
-            ) {
-                Canvas(modifier = Modifier.size(200.dp)) {
-                    val size = this.size.minDimension
-                    drawCircle(
-                        color = Color.LightGray,
-                        radius = size / 2,
-                        style = Stroke(width = 20.dp.toPx())
-                    )
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "暂无数据", style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "开始记账后查看分析", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // 分类列表占位
-            (1..5).forEach { _ ->
-                Row(
+            if (categoryData.isEmpty()) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .size(200.dp)
+                        .align(Alignment.CenterHorizontally),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "餐饮", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "0.00%", style = MaterialTheme.typography.bodyMedium)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "暂无数据", style = MaterialTheme.typography.bodyLarge)
+                        Text(text = "开始记账后查看分析", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    PieChart(data = categoryData, size = 150)
+                    Spacer(modifier = Modifier.width(16.dp))
+                    ChartLegend(slices = categoryData, modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -160,7 +177,7 @@ fun CategoryChart() {
 }
 
 @Composable
-fun TrendChartPlaceholder() {
+fun TrendChart(trendData: List<DailyTrendItem>) {
     Card {
         Column(
             modifier = Modifier
@@ -169,13 +186,33 @@ fun TrendChartPlaceholder() {
         ) {
             Text(text = "支出趋势", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "趋势图表 (待实现)", color = Color.Gray)
+            
+            if (trendData.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "暂无趋势数据", color = Color.Gray)
+                }
+            } else {
+                // 简化版本：显示列表
+                trendData.forEach { item ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = item.date, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = "支出¥${String.format("%.2f", item.expense)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
             }
         }
     }
