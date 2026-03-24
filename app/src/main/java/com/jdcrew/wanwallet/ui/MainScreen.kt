@@ -190,9 +190,7 @@ fun QuickActionCard(icon: androidx.compose.ui.graphics.vector.ImageVector, label
 
 @Composable
 fun StatsPage() {
-    Box(modifier = Modifier.fillMaxSize()) {
-        Text("📊 统计页面", modifier = Modifier.padding(16.dp))
-    }
+    com.jdcrew.wanwallet.ui.screens.StatsPage()
 }
 
 @Composable
