@@ -66,14 +66,15 @@ interface CategoryDao {
 }
 
 @Database(
-    entities = [Transaction::class, Category::class],
-    version = 1,
+    entities = [Transaction::class, Category::class, com.jdcrew.wanwallet.data.model.Budget::class],
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class WanWalletDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
     abstract fun categoryDao(): CategoryDao
+    abstract fun budgetDao(): BudgetDao
     
     companion object {
         const val DATABASE_NAME = "wanwallet_database"
