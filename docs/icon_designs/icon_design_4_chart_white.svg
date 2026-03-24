@@ -1,0 +1,29 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 - 白色 -->
+  <circle cx="256" cy="256" r="256" fill="white"/>
+  
+  <!-- 外环 - 绿色 -->
+  <circle cx="256" cy="256" r="240" fill="none" stroke="#4CAF50" stroke-width="24"/>
+  
+  <!-- 图表图标 -->
+  <g>
+    <!-- 柱状图 -->
+    <rect x="140" y="280" width="40" height="100" fill="#4CAF50" rx="4"/>
+    <rect x="200" y="240" width="40" height="140" fill="#2196F3" rx="4"/>
+    <rect x="260" y="200" width="40" height="180" fill="#4CAF50" rx="4"/>
+    <rect x="320" y="260" width="40" height="120" fill="#2196F3" rx="4"/>
+    
+    <!-- 上升箭头 -->
+    <path d="M 140 180 L 340 180 L 340 140 M 340 180 L 300 140" 
+          stroke="#4CAF50" stroke-width="12" fill="none" 
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  
+  <!-- 文字 -->
+  <text x="256" y="420" 
+        font-family="Arial, sans-serif" 
+        font-size="32" 
+        font-weight="bold" 
+        fill="#333" 
+        text-anchor="middle">WanWallet</text>
+</svg>
