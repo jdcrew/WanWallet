@@ -6,6 +6,7 @@ import android.util.Log
 import com.jdcrew.wanwallet.data.model.PaymentChannel
 import com.jdcrew.wanwallet.data.model.Transaction
 import com.jdcrew.wanwallet.data.model.TransactionType
+import com.jdcrew.wanwallet.data.repository.TransactionCaptureHandler
 import java.text.DecimalFormat
 import java.util.regex.Pattern
 
@@ -15,6 +16,9 @@ import java.util.regex.Pattern
  * 监听微信、支付宝、云闪付的支付通知，自动提取交易信息
  */
 class PaymentNotificationListener : NotificationListenerService() {
+    
+    // TODO: 使用 Hilt 注入
+    // private var captureHandler: TransactionCaptureHandler? = null
     
     companion object {
         private const val TAG = "PaymentNotification"
@@ -79,8 +83,8 @@ class PaymentNotificationListener : NotificationListenerService() {
                 isAuto = true
             )
             
-            // TODO: 保存到数据库
-            // transactionCallback?.invoke(transaction)
+            // TODO: 保存到数据库 (需要解决 Service 中 Hilt 注入问题)
+            // captureHandler?.saveTransaction(transaction)
             
         } catch (e: Exception) {
             Log.e(TAG, "Error processing notification", e)
