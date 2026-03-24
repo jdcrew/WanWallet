@@ -8,6 +8,8 @@ import com.jdcrew.wanwallet.data.model.PresetCategories
 import com.jdcrew.wanwallet.data.model.Transaction
 import com.jdcrew.wanwallet.data.model.TransactionType
 import com.jdcrew.wanwallet.data.repository.CategoryRepository
+import com.jdcrew.wanwallet.data.repository.CategoryRuleEngine
+import com.jdcrew.wanwallet.data.repository.MerchantProcessor
 import com.jdcrew.wanwallet.data.repository.TransactionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -30,7 +32,9 @@ data class AddTransactionUiState(
 @HiltViewModel
 class AddTransactionViewModel @Inject constructor(
     private val transactionRepository: TransactionRepository,
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val ruleEngine: CategoryRuleEngine,
+    private val merchantProcessor: MerchantProcessor
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(AddTransactionUiState())
@@ -79,6 +83,26 @@ class AddTransactionViewModel @Inject constructor(
     
     fun updateMerchant(merchant: String) {
         _uiState.value = _uiState.value.copy(merchant = merchant)
+        
+        // 自动分类
+        if (merchant.isNotBlank() && _uiState.value.amount.isNotEmpty()) {
+            autoClassify(merchant, _uiState.value.amount.toDoubleOrNull() ?: 0.0)
+        }
+    }
+    
+    /**
+     * 自动分类
+     */
+    private fun autoClassify(merchant: String, amount: Double) {
+        viewModelScope.launch {
+            val normalizedMerchant = merchantProcessor.normalizeMerchant(merchant)
+            val categories = _uiState.value.categories
+            val matchedCategory = ruleEngine.matchCategory(normalizedMerchant, categories)
+            
+            if (matchedCategory != null && matchedCategory != _uiState.value.selectedCategory) {
+                _uiState.value = _uiState.value.copy(selectedCategory = matchedCategory)
+            }
+        }
     }
     
     fun updateNote(note: String) {
