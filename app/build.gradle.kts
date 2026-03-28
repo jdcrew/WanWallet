@@ -28,6 +28,12 @@ android {
                 "proguard-rules.pro"
             )
         }
+        
+        debug {
+            // Enable test coverage for debug builds
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
+        }
     }
     
     compileOptions {
@@ -78,10 +84,70 @@ dependencies {
     
     // Testing
     testImplementation(libs.junit)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.arch.core.testing)
+    testImplementation(libs.truth)
+    
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.hilt.android.testing)
+    
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+// JaCoCo 覆盖率配置
+tasks.register<JacocoReport>("jacocoTestReport") {
+    group = "Reporting"
+    description = "Generate JaCoCo code coverage report"
+    
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+    
+    val fileFilter = listOf(
+        "**/R.class",
+        "**/R$*.class",
+        "**/BuildConfig.*",
+        "**/Manifest*.*",
+        "**/*Test*.*",
+        "android/**/*.*",
+        "**/*\$ViewInjector*.*",
+        "**/*Dagger*.*",
+        "**/*_MembersInjector.class",
+        "**/*_Factory.class",
+        "**/*_Provide*Factory.class",
+        "**/*Extensions*.*"
+    )
+    
+    val kotlinTree = fileTree("src/main/java") {
+        exclude(fileFilter)
+        include("**/*.kt")
+    }
+    
+    val javaTree = fileTree("build/tmp/kotlin-classes/debug") {
+        exclude(fileFilter)
+        include("**/*.class")
+    }
+    
+    sourceDirectories.setFrom(files(listOf("src/main/java")))
+    classDirectories.setFrom(files(listOf(kotlinTree, javaTree)))
+    
+    executionData.setFrom(fileTree(layout.buildDirectory) {
+        include(
+            "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec",
+            "jacoco/testDebugUnitTest.exec",
+            "outputs/code_coverage/debugAndroidTest/connected/*.ec"
+        )
+    })
+    
+    doFirst {
+        println("Generating JaCoCo coverage report...")
+    }
 }
