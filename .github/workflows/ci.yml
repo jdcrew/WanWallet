@@ -19,58 +19,22 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
     
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     
-    - name: Download dependencies
-      run: ./gradlew dependencies --refresh-dependencies
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+    
+    - name: Build with Gradle
+      run: ./gradlew build --no-daemon
     
     - name: Run unit tests
-      run: ./gradlew test
+      run: ./gradlew test --no-daemon
     
-    - name: Generate JaCoCo coverage report
-      run: ./gradlew jacocoTestReport
-    
-    - name: Upload coverage report to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
-        flags: unittests
-        name: codecov-wanwallet
-        fail_ci_if_error: false
-    
-    - name: Run lint check
-      run: ./gradlew lint
-    
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
-    
-    - name: Upload Debug APK
-      uses: actions/upload-artifact@v3
-      with:
-        name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
-    
-    - name: Upload coverage reports
-      uses: actions/upload-artifact@v3
-      with:
-        name: coverage-report
-        path: app/build/reports/jacoco/
-    
-    - name: Build Summary
+    - name: Upload test results
       if: always()
-      run: |
-        echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Branch:** ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        if [ ${{ job.status }} == "success" ]; then
-          echo "✅ Build passed" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Build failed" >> $GITHUB_STEP_SUMMARY
-        fi
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: app/build/test-results/
