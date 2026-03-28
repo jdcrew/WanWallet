@@ -2,8 +2,10 @@ package com.jdcrew.wanwallet.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jdcrew.wanwallet.data.model.Category
 import com.jdcrew.wanwallet.data.model.Transaction
 import com.jdcrew.wanwallet.data.model.TransactionType
+import com.jdcrew.wanwallet.data.repository.CategoryRepository
 import com.jdcrew.wanwallet.data.repository.TransactionRepository
 import com.jdcrew.wanwallet.ui.components.PieChartSlice
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,14 +36,41 @@ data class DailyTrendItem(
 
 @HiltViewModel
 class StatsViewModel @Inject constructor(
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    private val categoryRepository: CategoryRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
     
+    // 分类缓存 (ID -> Name)
+    private var categoryCache: Map<Long, String> = emptyMap()
+    
     init {
+        loadCategories()
         loadStats()
+    }
+    
+    /**
+     * 加载分类缓存
+     */
+    private fun loadCategories() {
+        viewModelScope.launch {
+            categoryRepository.allCategories.collect { categories ->
+                categoryCache = categories.associate { it.id to it.name }
+                // 分类更新后重新加载统计
+                if (_uiState.value.categoryData.isNotEmpty()) {
+                    loadStats()
+                }
+            }
+        }
+    }
+    
+    /**
+     * 根据分类 ID 获取分类名称
+     */
+    private fun getCategoryName(categoryId: Long): String {
+        return categoryCache[categoryId] ?: "未分类"
     }
     
     fun updatePeriod(period: StatsPeriod) {
@@ -95,7 +124,7 @@ class StatsViewModel @Inject constructor(
             val categoryMap = mutableMapOf<String, Double>()
             transactions.filter { it.type == TransactionType.EXPENSE }
                 .forEach { transaction ->
-                    val categoryName = "分类${transaction.categoryId}" // TODO: 从 Category 获取名称
+                    val categoryName = getCategoryName(transaction.categoryId)
                     categoryMap[categoryName] = (categoryMap[categoryName] ?: 0.0) + kotlin.math.abs(transaction.amount)
                 }
             
@@ -127,19 +156,53 @@ class StatsViewModel @Inject constructor(
         startTime: Long,
         endTime: Long
     ): List<DailyTrendItem> {
-        // 简化版本：返回 7 天数据
-        return (0 until 7).map { day ->
-            val calendar = Calendar.getInstance()
-            calendar.timeInMillis = startTime + day * 24 * 60 * 60 * 1000
-            val dateStr = java.text.SimpleDateFormat("MM/dd", java.util.Locale.CHINA)
-                .format(calendar.time)
+        val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.CHINA)
+        val displayFormat = java.text.SimpleDateFormat("MM/dd", java.util.Locale.CHINA)
+        
+        // 按日期聚合交易数据
+        val dailyMap = mutableMapOf<String, Pair<Double, Double>>() // date -> (income, expense)
+        
+        transactions.forEach { transaction ->
+            val dateKey = dateFormat.format(Date(transaction.time))
+            val (currentIncome, currentExpense) = dailyMap[dateKey] ?: (0.0 to 0.0)
             
-            DailyTrendItem(
-                date = dateStr,
-                income = 0.0, // TODO: 实际计算
-                expense = 0.0
-            )
+            val newIncome = if (transaction.type == TransactionType.INCOME) {
+                currentIncome + transaction.amount
+            } else {
+                currentIncome
+            }
+            
+            val newExpense = if (transaction.type == TransactionType.EXPENSE) {
+                currentExpense + kotlin.math.abs(transaction.amount)
+            } else {
+                currentExpense
+            }
+            
+            dailyMap[dateKey] = newIncome to newExpense
         }
+        
+        // 生成完整的日期序列 (填充缺失的日期)
+        val result = mutableListOf<DailyTrendItem>()
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = startTime
+        
+        while (calendar.timeInMillis <= endTime) {
+            val dateKey = dateFormat.format(calendar.time)
+            val displayDate = displayFormat.format(calendar.time)
+            val (income, expense) = dailyMap[dateKey] ?: (0.0 to 0.0)
+            
+            result.add(
+                DailyTrendItem(
+                    date = displayDate,
+                    income = income,
+                    expense = expense
+                )
+            )
+            
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
+        }
+        
+        return result
     }
     
     private fun getRandomColor(seed: Int): Color {
